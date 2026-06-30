@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+*.key
+*.key.pub
+*.log
+
+.DS_Store
+Thumbs.db
