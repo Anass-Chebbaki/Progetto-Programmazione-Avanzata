@@ -1,9 +1,23 @@
+# Dipendenze
 node_modules/
+
+# Build TypeScript
 dist/
+*.tsbuildinfo
+
+# Variabili d'ambiente
 .env
+
+# Chiavi RSA per JWT RS256
 *.key
 *.key.pub
+
+# Log
 *.log
 
+# Coverage dei test
+coverage/
+
+# File di sistema
 .DS_Store
 Thumbs.db
