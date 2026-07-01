@@ -1,0 +1,14 @@
+#esclude dal "contesto di build" ciò che non deve entrare nell'immagine
+
+node_modules
+npm-debug.log
+dist
+coverage
+.git
+.gitignore
+.env
+*.key
+*.key.pub
+.vscode
+Dockerfile
+docker-compose.yml

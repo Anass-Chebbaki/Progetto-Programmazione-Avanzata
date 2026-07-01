@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: battaglia_navale_db
+    restart: unless-stopped
+    # L'immagine ufficiale legge POSTGRES_*: le mappiamo dalle nostre DB_* del .env
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"          # esposto sull'host per ispezione
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # persistenza dei dati 
+    healthcheck:
+      # "healthy" solo quando Postgres accetta connessioni sul nostro DB/utente
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: battaglia_navale_app
+    restart: unless-stopped
+    env_file:
+      - .env                 # inietta PORT, NODE_ENV, DB_*, JWT_* nel container
+    ports:
+      - "3000:3000"          # API REST raggiungibile dall'host
+    depends_on:
+      postgres:
+        condition: service_healthy   # l'app parte solo a DB pronto
+    volumes:
+      - ./src:/usr/src/app/src        
+
+volumes:
+  pgdata:

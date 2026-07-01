@@ -1,0 +1,9 @@
+# Fine-riga normalizzati per sicurezza cross-OS
+* text=auto eol=lf
+
+# Gli script di shell DEVONO essere LF, altrimenti falliscono nel container linx
+*.sh text eol=lf
+
+# I file batch/PowerShell di Windows restano CRLF
+*.bat text eol=crlf
+*.ps1 text eol=crlf
