@@ -5,6 +5,7 @@ import express from 'express';
 import { StatusCodes } from 'http-status-codes';
 import dotenv from 'dotenv';
 import DatabaseConnection from './config/database';
+import './model'; // registra User/Game/Move e le loro associazioni all'avvio
 
 dotenv.config();
 
