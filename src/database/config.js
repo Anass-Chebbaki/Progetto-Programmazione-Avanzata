@@ -12,6 +12,7 @@ const common = {
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT) || 5432,
   dialect: 'postgres',
+  seederStorage: 'sequelize', //rende i seed IDEMPOTENTI (ogni seeder gira una volta soltanto)
 };
 
 module.exports = {
