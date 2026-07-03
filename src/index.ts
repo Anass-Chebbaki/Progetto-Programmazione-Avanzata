@@ -6,6 +6,8 @@ import { StatusCodes } from 'http-status-codes';
 import dotenv from 'dotenv';
 import DatabaseConnection from './config/database';
 import './model'; // registra User/Game/Move e le loro associazioni all'avvio
+import routes from './routes';
+import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -13,26 +15,27 @@ const PORT = Number(process.env.PORT) || 3000;
 
 async function bootstrap(): Promise<void> {
   const app = express();
-  app.use(express.json()); // parsing del body JSON per le rotte future
+  app.use(express.json());
 
-  // Recupera l'UNICA connessione al DB (Singleton) e verificala istant.
   const db = DatabaseConnection.getInstance();
   try {
     await db.authenticate();
     console.log('[app] Connessione al database riuscita');
   } catch (err) {
-    // Fail-fast: se il DB non e' raggiungibile, non ha senso avviare l'app.
     console.error('[app] Impossibile connettersi al database:', err);
     process.exit(1);
   }
 
-  // Endpoint di health-check: risponde 200 se l'app e' in piedi.
+  // Health-check
   app.get('/health', (_req, res) => {
-    res.status(StatusCodes.OK).json({
-      status: 'ok',
-      service: 'battaglia-navale-backend',
-    });
+    res.status(StatusCodes.OK).json({ status: 'ok', service: 'battaglia-navale-backend' });
   });
+
+  // Rotte applicative
+  app.use(routes);
+
+  // Gestione errori: SEMPRE per ultimo, dopo le rotte.
+  app.use(errorHandler);
 
   app.listen(PORT, () => {
     console.log(`[app] Server in ascolto sulla porta ${PORT}`);
