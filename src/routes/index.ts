@@ -3,10 +3,13 @@
 
 import { Router } from 'express';
 import authRoutes from './authRoutes';
+import gameRoutes from './GameRoutes';
 
 const router = Router();
 
 // Rotte di autenticazione (definiscono i propri path: /login, /me).
 router.use(authRoutes);
+// rotte di games
+router.use(gameRoutes);
 
 export default router;
