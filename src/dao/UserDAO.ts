@@ -1,18 +1,21 @@
-
+import { FindOptions, Attributes, Transaction } from 'sequelize';
 import User from '../model/User';
 import { BaseDAO } from './BaseDAO';
 
-// eredita il CRUD e aggiunge finder specifici del dominio.
 export class UserDAO extends BaseDAO<User> {
   constructor() {
     super(User);
   }
 
-  // Ricerca per email (verrà usata in fase di autenticazione)
-  public async findByEmail(email: string): Promise<User | null> {
-    return this.model.findOne({ where: { email } });
+  // Ricerca per email (auth e lookup avversario), con opzioni per transazione/lock.
+  public async findByEmail(email: string, options?: Omit<FindOptions<Attributes<User>>, 'where'>): Promise<User | null> {
+    return this.findOne({ email }, options);
+  }
+
+  // Addebito/accredito ATOMICO lato DB: tokens = tokens - amount (esatto sui DECIMAL).
+  public async decrementTokens(userId: number, amount: number, transaction: Transaction): Promise<void> {
+    await this.model.decrement('tokens', { by: amount, where: { id: userId }, transaction });
   }
 }
 
-// Istanza singola (riutilizzabile)
 export default new UserDAO();
