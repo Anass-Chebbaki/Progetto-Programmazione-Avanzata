@@ -1,0 +1,103 @@
+// Logica di creazione partita: validazione di dominio, controllo/addebito credito,
+// vincolo "una partita attiva", allocazione flotte, il tutto in TRANSAZIONE (atomico).
+
+import DatabaseConnection from '../config/database';
+import gameDAO from '../dao/GameDAO';
+import userDAO from '../dao/UserDAO';
+import Game from '../model/Game';
+import { generateBoard } from '../utils/fleet';
+import { ErrorFactory, ErrorType } from '../errors/ErrorFactory';
+
+const GAME_CREATION_COST = 0.35;
+
+export interface CreateGameParams {
+  creatorId: number;
+  type: 'pvp' | 'pvai';
+  gridSize: number;
+  ships: number[];
+  opponentEmail?: string;
+}
+
+class GameService {
+  public async createGame(params: CreateGameParams): Promise<Game> {
+    const { creatorId, type, gridSize, ships, opponentEmail } = params;
+
+    // Fattibilita' geometrica: puro controllo sull'input, fuori dalla transazione.
+    this.assertFleetFits(gridSize, ships);
+
+    const sequelize = DatabaseConnection.getInstance().getSequelize();
+
+    // Transazione: o tutto (crea + addebita) o niente.
+    return sequelize.transaction(async (t) => {
+      // Blocca la riga del creatore: serializza creazioni concorrenti dello stesso utente.
+      const creator = await userDAO.findByPk(creatorId, { transaction: t, lock: true });
+      if (creator === null) {
+        throw ErrorFactory.create(ErrorType.Unauthorized, 'Utente non trovato');
+      }
+
+      // Credito sufficiente alla creazione (0.35).
+      if (creator.tokens < GAME_CREATION_COST) {
+        throw ErrorFactory.create(ErrorType.Unauthorized, 'Credito insufficiente per creare la partita');
+      }
+
+      // Il creatore non deve avere partite in corso.
+      const creatorActive = await gameDAO.findActiveGameForUser(creatorId, { transaction: t });
+      if (creatorActive !== null) {
+        throw ErrorFactory.create(ErrorType.Conflict, "Hai gia' una partita attiva");
+      }
+
+      // Avversario (solo PvP).
+      let player2Id: number | null = null;
+      if (type === 'pvp') {
+        const opponent = await userDAO.findByEmail(opponentEmail as string, { transaction: t, lock: true });
+        if (opponent === null) {
+          throw ErrorFactory.create(ErrorType.NotFound, 'Avversario non trovato');
+        }
+        if (opponent.id === creatorId) {
+          throw ErrorFactory.create(ErrorType.BadRequest, 'Non puoi sfidare te stesso');
+        }
+        const opponentActive = await gameDAO.findActiveGameForUser(opponent.id, { transaction: t });
+        if (opponentActive !== null) {
+          throw ErrorFactory.create(ErrorType.Conflict, "L'avversario ha gia' una partita attiva");
+        }
+        player2Id = opponent.id;
+      }
+
+      // Allocazione randomica delle flotte (entrambi i giocatori; quandoo PvAI -> la seconda e' dell'IA).
+      const boardPlayer1 = generateBoard(gridSize, ships);
+      const boardPlayer2 = generateBoard(gridSize, ships);
+
+      // Crea la partita.
+      const game = await gameDAO.create(
+        {
+          type,
+          status: 'in_progress',
+          gridSize,
+          player1Id: creatorId,
+          player2Id,
+          currentTurn: 'player1',
+          winner: null,
+          boardPlayer1,
+          boardPlayer2,
+        },
+        { transaction: t },
+      );
+
+      // Addebita 0.35 al creatore (atomocità lato database).
+      await userDAO.decrementTokens(creatorId, GAME_CREATION_COST, t);
+
+      return game;
+    });
+  }
+
+  // Ogni nave deve entrare nella griglia e la flotta deve starci.
+  private assertFleetFits(gridSize: number, ships: number[]): void {
+    const tooLong = ships.some((s) => s > gridSize);
+    const totalCells = ships.reduce((sum, s) => sum + s, 0);
+    if (tooLong || totalCells > gridSize * gridSize) {
+      throw ErrorFactory.create(ErrorType.BadRequest, 'La flotta non entra nella griglia indicata');
+    }
+  }
+}
+
+export default new GameService();
