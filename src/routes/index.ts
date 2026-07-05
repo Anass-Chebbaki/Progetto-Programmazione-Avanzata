@@ -3,7 +3,8 @@
 
 import { Router } from 'express';
 import authRoutes from './authRoutes';
-import gameRoutes from './GameRoutes';
+import gameRoutes from './gameRoutes';
+
 
 const router = Router();
 
