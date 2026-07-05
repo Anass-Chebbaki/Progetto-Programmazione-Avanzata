@@ -19,5 +19,11 @@ export const createGameSchema = z
       ctx.addIssue({ code: 'custom', message: "opponentEmail non ammessa contro l'IA", path: ['opponentEmail'] });
     }
   });
-
 export type CreateGameInput = z.infer<typeof createGameSchema>;
+
+// Mossa: coordinate 0-based. Il limite superiore (< gridSize) lo controlla il service.
+export const moveSchema = z.object({
+  row: z.number().int().min(0),
+  col: z.number().int().min(0),
+});
+export type MoveInput = z.infer<typeof moveSchema>;
