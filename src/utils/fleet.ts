@@ -58,3 +58,13 @@ export function generateBoard(gridSize: number, shipSizes: number[]): Board {
 
   return { gridSize, ships };
 }
+
+// Colpito? true se (row,col) appartiene a una nave della board.
+export function isHit(board: Board, row: number, col: number): boolean {
+  return board.ships.some((ship) => ship.cells.some((cell) => cell.r === row && cell.c === col));
+}
+
+// Numero totale di celle occupate da navi: serve per rilevare la vittoria.
+export function totalShipCells(board: Board): number {
+  return board.ships.reduce((sum, ship) => sum + ship.cells.length, 0);
+}
