@@ -4,6 +4,7 @@
 import DatabaseConnection from '../config/database';
 import gameDAO from '../dao/GameDAO';
 import userDAO from '../dao/UserDAO';
+import moveDAO from '../dao/MoveDAO';
 import Game from '../model/Game';
 import { generateBoard } from '../utils/fleet';
 import { ErrorFactory, ErrorType } from '../errors/ErrorFactory';
@@ -17,6 +18,22 @@ export interface CreateGameParams {
   ships: number[];
   opponentEmail?: string;
 }
+
+// Un colpo sparato (coordinate + esito): non rivela le navi non colpite.
+export interface Shot {
+  row: number;
+  col: number;
+  result: string;
+}
+
+export interface GameStateView {
+  game: Game;
+  side: 'player1' | 'player2';
+  yourTurn: boolean;
+  myShots: Shot[];
+  shotsAgainstMe: Shot[];
+}
+
 
 class GameService {
   public async createGame(params: CreateGameParams): Promise<Game> {
@@ -88,6 +105,33 @@ class GameService {
 
       return game;
     });
+  }
+
+  // Stato della partita dal punto di vista del richiedente (solo colpi gia' sparati).
+  public async getGameState(gameId: number, userId: number): Promise<GameStateView> {
+    const game = await gameDAO.findByPk(gameId);
+    if (game === null) {
+      throw ErrorFactory.create(ErrorType.NotFound, 'Partita non trovata');
+    }
+
+    let side: 'player1' | 'player2';
+    if (userId === game.player1Id) {
+      side = 'player1';
+    } else if (userId === game.player2Id) {
+      side = 'player2';
+    } else {
+      throw ErrorFactory.create(ErrorType.Forbidden, 'Non partecipi a questa partita');
+    }
+
+    const allMoves = await moveDAO.findByGame(gameId);
+    const myShots: Shot[] = allMoves
+      .filter((m) => m.userId === userId)
+      .map((m) => ({ row: m.row, col: m.col, result: m.result }));
+    const shotsAgainstMe: Shot[] = allMoves
+      .filter((m) => m.userId !== userId)
+      .map((m) => ({ row: m.row, col: m.col, result: m.result }));
+
+    return { game, side, yourTurn: game.currentTurn === side, myShots, shotsAgainstMe };
   }
 
   // Ogni nave deve entrare nella griglia e la flotta deve starci.

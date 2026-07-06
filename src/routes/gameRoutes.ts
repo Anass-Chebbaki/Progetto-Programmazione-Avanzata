@@ -13,5 +13,6 @@ const router = Router();
 
 router.post('/games', authenticate, checkCredit, validateBody(createGameSchema), asyncHandler(gameController.create));
 router.post('/games/:id/moves', authenticate, checkCredit, validateBody(moveSchema), asyncHandler(gameController.move));
+router.get('/games/:id', authenticate, checkCredit, asyncHandler(gameController.state));
 
 export default router;
