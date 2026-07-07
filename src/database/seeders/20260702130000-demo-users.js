@@ -4,7 +4,7 @@
  * Set che è stato pensato per i test dei prossimi giorni
  * ---------------------------------------------------------------------
  * Seeder: utenti iniziali con credito token.
- * - admin@example.com : ruolo admin, credito ampio (ricarica, Giorno 11)
+ * - admin@example.com : ruolo admin, credito ampio (ricarica) -> TODO prossimi giorni
  * - alice/bob         : utenti standard per partite PvP
  * - charlie           : credito 0 -> fixture per "credito insufficiente/esaurito"
  */
