@@ -18,6 +18,9 @@ dist/
 # Coverage dei test
 coverage/
 
+#
+*demo_revisione.txt
+
 # File di sistema
 .DS_Store
 Thumbs.db
