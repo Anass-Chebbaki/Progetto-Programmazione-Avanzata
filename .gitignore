@@ -18,8 +18,8 @@ dist/
 # Coverage dei test
 coverage/
 
-#
-*demo_revisione.txt
+# File comandi demo
+*demo_revisione.sh
 
 # File di sistema
 .DS_Store
