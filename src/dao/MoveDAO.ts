@@ -25,6 +25,14 @@ export class MoveDAO extends BaseDAO<Move> {
   ): Promise<Move[]> {
     return this.model.findAll({ where: { gameId, userId }, ...options });
   }
+
+  // Mosse dell'IA in una partita (userId IS NULL): per evitare ripetizioni e contare gli hit.
+  public async findAiMoves(
+    gameId: number,
+    options?: Omit<FindOptions<Attributes<Move>>, 'where'>,
+  ): Promise<Move[]> {
+    return this.model.findAll({ where: { gameId, userId: null }, ...options }); //null quindi Ai (non utnte)
+  }
 }
 
 export default new MoveDAO();
