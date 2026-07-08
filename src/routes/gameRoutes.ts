@@ -11,8 +11,12 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
+// Creazione: gated dal credito (401 se saldo <= 0, "Credito esaurito";
+// il controllo < 0.35 dentro il service dara' invece "Credito insufficiente").
 router.post('/games', authenticate, checkCredit, validateBody(createGameSchema), asyncHandler(gameController.create));
-router.post('/games/:id/moves', authenticate, checkCredit, validateBody(moveSchema), asyncHandler(gameController.move));
-router.get('/games/:id', authenticate, checkCredit, asyncHandler(gameController.state));
+
+// Mossa e stato: NIENTE checkCredit (operazioni in-partita).
+router.post('/games/:id/moves', authenticate, validateBody(moveSchema), asyncHandler(gameController.move));
+router.get('/games/:id', authenticate, asyncHandler(gameController.state));
 
 export default router;
