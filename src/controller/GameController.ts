@@ -36,7 +36,8 @@ class GameController {
     const gameId = parseGameId(req.params.id);
     const { row, col } = req.body as { row: number; col: number };
     const outcome = await moveService.executeMove({ gameId, userId: req.user!.id, row, col });
-    res.status(StatusCodes.OK).json({ result: outcome.result, game: toPublicGame(outcome.game) });
+    // aiMove presente solo nel PvAI quando l'IA risponde (altrimenti omesso dal JSON).
+    res.status(StatusCodes.OK).json({ result: outcome.result, aiMove: outcome.aiMove, game: toPublicGame(outcome.game) });
   }
 
   // GET /games/:id —> stato della partita per il richiedente.
