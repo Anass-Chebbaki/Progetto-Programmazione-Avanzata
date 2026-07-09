@@ -14,6 +14,7 @@ const sequelize = DatabaseConnection.getInstance().getSequelize();
 class User extends Model<InferAttributes<User>, InferCreationAttributes<User>> {
   declare id: CreationOptional<number>;
   declare email: string;
+  declare password: string; // hash bycript (mai in chiaro)
   declare role: CreationOptional<string>;       // 'user' | 'admin'
   declare tokens: CreationOptional<number>;      // credito (frazionario)
   declare createdAt: CreationOptional<Date>;
@@ -28,6 +29,10 @@ User.init(
       allowNull: false,
       unique: true,
       validate: { isEmail: true },
+    },
+    password:{
+      type: DataTypes.STRING,
+      allowNull: false,
     },
     role: {
       type: DataTypes.STRING,
