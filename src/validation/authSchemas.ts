@@ -3,9 +3,10 @@
 
 import { z } from 'zod';
 
-// Body atteso da POST /login: una sola email valida.
+// Body atteso da POST /login: una sola email valida + password 
 export const loginSchema = z.object({
   email: z.email('Email non valida'),
+  password: z.string().min(1, 'password obblgatoria')
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;

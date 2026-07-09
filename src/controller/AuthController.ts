@@ -7,8 +7,8 @@ import authService from '../service/AuthService';
 class AuthController {
   // POST /login — il body e' gia' stato validato dal middleware zod.
   public async login(req: Request, res: Response): Promise<void> {
-    const { email } = req.body as { email: string };
-    const token = await authService.login(email);
+    const { email, password } = req.body as { email: string; password: string};
+    const token = await authService.login(email, password);
     res.status(StatusCodes.OK).json({ token });
   }
 
