@@ -29,6 +29,4 @@ EXPOSE 3000
 # L'entrypoint prepara l'ambiente (chiavi, attesa DB, migrate, seed)
 ENTRYPOINT ["bash", "entrypoint.sh"]
 
-# Comando di default: sviluppo con tsx (hot-reload).
-# Il build di produzione resta disponibile con "npm run build" + "npm start".
 CMD ["npm", "run", "dev"]
