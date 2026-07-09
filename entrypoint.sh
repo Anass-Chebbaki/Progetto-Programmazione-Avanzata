@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # entrypoint.sh — preparazione dell'ambiente all'avvio del container "app".
 # Ordine: (1) chiavi RS256, (2) attesa Postgres, (3) migrazioni, (4) seed, (5) avvio app.
 # set -e: interrompe l'avvio al primo errore reale; i cicli di attesa sono esenti.
@@ -45,21 +44,18 @@ echo "==> [entrypoint] Postgres pronto"
 
 # -----------------------------------------------------------------------------
 # 3) Migrazioni: portano lo schema all'ultima versione.
-#    oNOTA: nessuna migrazione ancora presente -> no-op senza errori.
 # -----------------------------------------------------------------------------
 echo "==> [entrypoint] Eseguo le migrazioni..."
 npm run migrate
 
 # -----------------------------------------------------------------------------
-# 4) Seed: popola i dati iniziali (es. utenti con credito token).
-#    NOTA: nessun seeder ancora presente -> no-op senza errori.
+# 4) Seed: popola i dati iniziali 
 # -----------------------------------------------------------------------------
 echo "==> [entrypoint] Eseguo i seed..."
 npm run seed
 
 # -----------------------------------------------------------------------------
-# 5) Avvio dell'app: exec sostituisce la shell col processo Node,
-#    cosi' i segnali arrivano direttamente all'applicazione.
+# 5) Avvio dell'app
 # -----------------------------------------------------------------------------
 echo "==> [entrypoint] Preparazione completata, avvio applicazione"
 exec "$@"
