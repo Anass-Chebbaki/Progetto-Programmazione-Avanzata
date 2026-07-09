@@ -1,4 +1,4 @@
-// Controller della creazione partita: adatta HTTP <-> GameService, senza logica ne' DB.
+// Controller gioco
 
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
@@ -7,8 +7,8 @@ import moveService from '../service/MoveService';
 import { toPublicGame } from '../dto/gameDto';
 import { ErrorFactory, ErrorType } from '../errors/ErrorFactory';
 
-// Estrae e valida l'id partita dall'URL. Funzione di MODULO (niente "this":
-// i metodi del controller vengono passati staccati ad Express).
+// Estrae e valida l'id partita dall'URL. Funzione di MODULO
+// (i metodi del controller vengono passati staccati ad Express).
 function parseGameId(raw: unknown): number {
   const id = Number(raw);
   if (!Number.isInteger(id) || id <= 0) {

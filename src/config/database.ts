@@ -9,7 +9,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 class DatabaseConnection {
-  // Riferimento all'unica istanza della classe (cuore del Singleton)
+  // Riferimento all'unica istanza della classe
   private static instance: DatabaseConnection;
 
   // L'unica istanza di Sequelize condivisa nell'app
