@@ -1,4 +1,4 @@
-// Controller di autenticazione: adatta HTTP <-> service, senza logica di business ne' DB (giusto per fare uno smoke test).
+// Controller di autenticazione: adatta HTTP <-> service.
 
 import { Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';

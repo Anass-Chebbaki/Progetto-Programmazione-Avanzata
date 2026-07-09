@@ -40,7 +40,7 @@ User.init(
       allowNull: false,
       defaultValue: 0,
       get(): number {
-        // I DECIMAL arrivano come stringa -> li convertiamo in number.
+        // I DECIMAL arrivano come stringa con sequelize -> li convertiamo in number.
         const raw = this.getDataValue('tokens');
         return raw === null || raw === undefined ? 0 : Number(raw);
       },
