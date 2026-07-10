@@ -37,8 +37,13 @@ class GameController {
     const gameId = parseGameId(req.params.id);
     const { row, col } = req.body as { row: number; col: number };
     const outcome = await moveService.executeMove({ gameId, userId: req.user!.id, row, col });
-    // aiMove presente solo nel PvAI quando l'IA risponde (altrimenti omesso dal JSON).
-    res.status(StatusCodes.OK).json({ result: outcome.result, aiMove: outcome.aiMove, game: toPublicGame(outcome.game) });
+    // silenced / aiMove presenti solo quando pertinenti (altrimenti omessi dal JSON).
+    res.status(StatusCodes.OK).json({
+      result: outcome.result,
+      silenced: outcome.silenced,
+      aiMove: outcome.aiMove,
+      game: toPublicGame(outcome.game),
+    });
   }
 
   // POST /games/:id/silence —> il difensore arma il silenzio sul prossimo colpo subito.

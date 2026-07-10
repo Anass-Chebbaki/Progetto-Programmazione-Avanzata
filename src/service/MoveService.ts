@@ -32,9 +32,10 @@ export interface AiMove {
 }
 
 export interface MoveOutcome {
-  result: 'hit' | 'miss';      // esito mossa dell'umano
-  aiMove?: AiMove;             // presente solo in  PvAi quando Ai risponde
-  game: Game;                  
+  result: 'hit' | 'miss' | 'hidden'; // 'hidden' = il difensore ha silenziato l'esito
+  silenced?: boolean;                // true quando l'esito e' nascosto all'attaccante
+  aiMove?: AiMove;                    // solo PvAI, quando l'IA risponde
+  game: Game;
 }
 
 class MoveService {
@@ -89,12 +90,31 @@ class MoveService {
         throw ErrorFactory.create(ErrorType.Conflict, "Hai gia' colpito questa cella");
       }
 
-      // --- MOSSA UMANO ---    
+      // --- MOSSA UMANO & GESTIONE SILENCE ---    
       // Esito sulla board avversaria.
       const result: 'hit' | 'miss' = isHit(opponentBoard, row, col) ? 'hit' : 'miss';
 
-      // Registra la mossa.
-      await moveDAO.create({ gameId, userId, row, col, result }, { transaction: t });
+      // --- SILENCE (solo PvP): il DIFENSORE assorbe il colpo se ha armato ed ha budget. ---
+      let silenced = false;
+      if (game.type === 'pvp') {
+        const defenderSide = side === 'player1' ? 'player2' : 'player1';
+        const defenderArmed = defenderSide === 'player1' ? game.silenceArmedPlayer1 : game.silenceArmedPlayer2;
+        const defenderBudget = defenderSide === 'player1' ? game.silencePlayer1 : game.silencePlayer2;
+        if (defenderArmed && defenderBudget > 0) {
+          silenced = true;
+          // Consuma un silenzio del difensore e disarma.
+          if (defenderSide === 'player1') {
+            game.silencePlayer1 = defenderBudget - 1;
+            game.silenceArmedPlayer1 = false;
+          } else {
+            game.silencePlayer2 = defenderBudget - 1;
+            game.silenceArmedPlayer2 = false;
+          }
+        }
+      }
+
+      // Registra la mossa + flag silenced
+      await moveDAO.create({ gameId, userId, row, col, result, silenced }, { transaction: t });
 
       // Addebita 0.015 (puo' andare sotto zero: la partita continua; il blocco a
       // credito esaurito e' un middleware che vedo dopo come gestire).
@@ -116,8 +136,18 @@ class MoveService {
           aiMove = await this.playAiMove(game, t);
         }
       }
+
       await game.save({ transaction: t });
-      return { result, aiMove, game };
+
+      // A fine partita si rivela tutto; altrimenti un colpo silenziato resta nascosto.
+      const masked = silenced && game.status !== 'completed';
+
+      return { 
+        result: masked ? 'hidden' : result,
+        silenced: masked ? true : undefined, 
+        aiMove, 
+        game 
+      };
     });
   }
 
