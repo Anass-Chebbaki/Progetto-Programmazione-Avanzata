@@ -16,11 +16,12 @@ const router = Router();
 // 2) il controllo < 0.35 dentro il service dara' invece "Credito insufficiente").
 // 3) Mossa e stato: NIENTE checkCredit (operazioni in-partita).
 // 4) nuova feature: il difensore può "armare" il silence
+// 5) nuova rotta: creazione stroico .csv
 //===============================================================================
 
 router.post('/games', authenticate, checkCredit, validateBody(createGameSchema), asyncHandler(gameController.create));
 router.post('/games/:id/moves', authenticate, validateBody(moveSchema), asyncHandler(gameController.move));
 router.post('/games/:id/silence', authenticate, asyncHandler(gameController.armSilence));
 router.get('/games/:id', authenticate, asyncHandler(gameController.state));
-
+router.get('/games/:id/moves/csv', authenticate, asyncHandler(gameController.movesCsv));
 export default router;

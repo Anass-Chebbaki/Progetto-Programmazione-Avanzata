@@ -65,6 +65,17 @@ class GameController {
       shotsAgainstMe: s.shotsAgainstMe,
     });
   }
+
+  // GET /games/:id/moves/csv —> storico mosse in CSV 
+  public async movesCsv(req: Request, res: Response): Promise<void> {
+    const gameId = parseGameId(req.params.id);
+    const csv = await gameService.getMovesCsv(gameId, req.user!.id);
+    res
+      .status(StatusCodes.OK)
+      .type('text/csv')
+      .set('Content-Disposition', `attachment; filename="partita-${gameId}-mosse.csv"`)
+      .send(csv);
+  }
 }
 
 export default new GameController();

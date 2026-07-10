@@ -9,6 +9,7 @@ import moveDAO from '../dao/MoveDAO';
 import Game from '../model/Game';
 import { generateBoard } from '../utils/fleet';
 import { ErrorFactory, ErrorType } from '../errors/ErrorFactory';
+import { toCsv } from '../utils/csv';
 
 const GAME_CREATION_COST = 0.35;
 
@@ -44,9 +45,43 @@ export interface GameStateView {
 
 
 class GameService {
+
+  // Storico mosse in CSV. Un colpo silenziato del richiedente resta
+  // 'hidden' finche' la partita e' in corso (coerente con lo stato); si rivela a fine partita.
+  public async getMovesCsv(gameId: number, userId: number): Promise<string> {
+    const game = await gameDAO.findByPk(gameId);
+    if (game === null) {
+      throw ErrorFactory.create(ErrorType.NotFound, 'Partita non trovata');
+    }
+    if (userId !== game.player1Id && userId !== game.player2Id) {
+      throw ErrorFactory.create(ErrorType.Forbidden, 'Non partecipi a questa partita');
+    }
+
+    const moves = await moveDAO.findByGame(gameId); // ordine cronologico
+    const gameOver = game.status === 'completed'; // sol quand è finita
+    const label = (uid: number | null): string =>
+      uid === game.player1Id ? 'player1' : uid === game.player2Id ? 'player2' : 'IA';
+
+    const headers = ['n', 'player', 'row', 'col', 'result', 'silenced', 'timestamp'];
+    const rows = moves.map((m, i) => {
+      const masked = m.silenced && m.userId === userId && !gameOver;
+      return [
+        i + 1,
+        label(m.userId),
+        m.row,
+        m.col,
+        masked ? 'hidden' : m.result,
+        m.silenced,
+        m.createdAt.toISOString(),
+      ];
+    });
+
+    return toCsv(headers, rows);
+  }
+
   public async createGame(params: CreateGameParams): Promise<Game> {
     const { creatorId, type, gridSize, ships, opponentEmail, silence } = params;
-
+    
     // Fattibilita' geometrica: puro controllo sull'input, fuori dalla transazione.
     this.assertFleetFits(gridSize, ships);
 
