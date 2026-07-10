@@ -26,6 +26,7 @@ export interface Shot {
   row: number;
   col: number;
   result: string;
+  silenced?: boolean; // true = vuol dire colpo silenziato dal difensore
 }
 
 export interface ArmSilenceResult{
@@ -133,18 +134,34 @@ class GameService {
     }
 
     const allMoves = await moveDAO.findByGame(gameId);
+    const gameOver = game.status === 'completed';
+
+    // I MIEI colpi (come attaccante): se il difensore li ha silenziati, restano 'hidden'
+    // finche' la partita e' in corso; a partita conclusa si rivelano.
     const myShots: Shot[] = allMoves
       .filter((m) => m.userId === userId)
-      .map((m) => ({ row: m.row, col: m.col, result: m.result }));
+      .map((m) => ({
+        row: m.row,
+        col: m.col,
+        result: m.silenced && !gameOver ? 'hidden' : m.result,
+        silenced: m.silenced || undefined,
+      }));
+
+    // I colpi SUBITI: li vedo sempre veri (conosco la mia board; il silence non nasconde nulla a me).
     const shotsAgainstMe: Shot[] = allMoves
       .filter((m) => m.userId !== userId)
-      .map((m) => ({ row: m.row, col: m.col, result: m.result }));
+      .map((m) => ({
+        row: m.row,
+        col: m.col,
+        result: m.result,
+        silenced: m.silenced || undefined,
+      }));
 
     return { game, side, yourTurn: game.currentTurn === side, myShots, shotsAgainstMe };
   }
 
   // Il difensore "arma" il silenzio sul prossimo colpo che subira' (solo PvP, budget > 0).
-  // NON decrementa qui: il consumo avviene quando il colpo viene assorbito (executeMove, S-C).
+  // NON decrementa qui: il consumo avviene quando il colpo viene assorbito
   public async armSilence(gameId: number, userId: number): Promise<ArmSilenceResult> {
     const sequelize = DatabaseConnection.getInstance().getSequelize();
     return sequelize.transaction(async (t) => {
