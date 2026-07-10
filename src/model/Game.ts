@@ -18,8 +18,12 @@ class Game extends Model<InferAttributes<Game>, InferCreationAttributes<Game>> {
   declare player2Id: CreationOptional<number | null>;     // avversario umano (null se IA)
   declare currentTurn: CreationOptional<string>;          // 'player1' | 'player2'
   declare winner: CreationOptional<string | null>;        // 'player1' | 'player2' | null
-  declare boardPlayer1: CreationOptional<object | null>;  // flotta player1 (JSONB,  più avanti)
-  declare boardPlayer2: CreationOptional<object | null>;  // flotta player2 (JSONB, più avanti)
+  declare boardPlayer1: CreationOptional<object | null>;  // flotta player1 (JSONB)
+  declare boardPlayer2: CreationOptional<object | null>;  // flotta player2 (JSONB)
+  declare silencePlayer1: CreationOptional<number>;          // budget silence player1 (0-5)
+  declare silencePlayer2: CreationOptional<number>;          // budget silence player2 (0-5)
+  declare silenceArmedPlayer1: CreationOptional<boolean>;    // player1 ha armato il silenzio sul prossimo colpo subito
+  declare silenceArmedPlayer2: CreationOptional<boolean>;    // idem player2
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -50,6 +54,10 @@ Game.init(
     },
     boardPlayer1: { type: DataTypes.JSONB, allowNull: true },
     boardPlayer2: { type: DataTypes.JSONB, allowNull: true },
+    silencePlayer1: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    silencePlayer2: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    silenceArmedPlayer1: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    silenceArmedPlayer2: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

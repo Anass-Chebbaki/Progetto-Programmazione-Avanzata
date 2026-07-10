@@ -11,12 +11,16 @@ import { asyncHandler } from '../utils/asyncHandler';
 
 const router = Router();
 
-// Creazione: gated dal credito (401 se saldo <= 0, "Credito esaurito";
-// il controllo < 0.35 dentro il service dara' invece "Credito insufficiente").
-router.post('/games', authenticate, checkCredit, validateBody(createGameSchema), asyncHandler(gameController.create));
+//===============================================================================
+// 1) Creazione: gated dal credito (401 se saldo <= 0, "Credito esaurito";
+// 2) il controllo < 0.35 dentro il service dara' invece "Credito insufficiente").
+// 3) Mossa e stato: NIENTE checkCredit (operazioni in-partita).
+// 4) nuova feature: il difensore può "armare" il silence
+//===============================================================================
 
-// Mossa e stato: NIENTE checkCredit (operazioni in-partita).
+router.post('/games', authenticate, checkCredit, validateBody(createGameSchema), asyncHandler(gameController.create));
 router.post('/games/:id/moves', authenticate, validateBody(moveSchema), asyncHandler(gameController.move));
+router.post('/games/:id/silence', authenticate, asyncHandler(gameController.armSilence));
 router.get('/games/:id', authenticate, asyncHandler(gameController.state));
 
 export default router;

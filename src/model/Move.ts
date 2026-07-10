@@ -17,6 +17,7 @@ class Move extends Model<InferAttributes<Move>, InferCreationAttributes<Move>> {
   declare row: number;
   declare col: number;
   declare result: string;                          // 'hit' or 'miss'
+  declare silenced: CreationOptional<boolean>;     // true = colpo sparato in silenzio
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 }
@@ -29,6 +30,7 @@ Move.init(
     row: { type: DataTypes.INTEGER, allowNull: false },
     col: { type: DataTypes.INTEGER, allowNull: false },
     result: { type: DataTypes.STRING, allowNull: false, validate: { isIn: [['hit', 'miss']] } },
+    silenced:{ type:DataTypes.BOOLEAN, allowNull: false, defaultValue: false},
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

@@ -1,5 +1,6 @@
 // Logica di creazione partita: validazione di dominio, controllo/addebito credito,
 // vincolo "una partita attiva", allocazione flotte, il tutto in TRANSAZIONE (atomico).
+// nuova feature: armin del silenzio
 
 import DatabaseConnection from '../config/database';
 import gameDAO from '../dao/GameDAO';
@@ -17,6 +18,7 @@ export interface CreateGameParams {
   gridSize: number;
   ships: number[];
   opponentEmail?: string;
+  silence: number; //budget silence iniziale (uguale per i due giocatori -> 0-5)
 }
 
 // Un colpo sparato (coordinate + esito): non rivela le navi non colpite.
@@ -24,6 +26,11 @@ export interface Shot {
   row: number;
   col: number;
   result: string;
+}
+
+export interface ArmSilenceResult{
+  armed: boolean;
+  silenceRemaining: number;
 }
 
 export interface GameStateView {
@@ -37,7 +44,7 @@ export interface GameStateView {
 
 class GameService {
   public async createGame(params: CreateGameParams): Promise<Game> {
-    const { creatorId, type, gridSize, ships, opponentEmail } = params;
+    const { creatorId, type, gridSize, ships, opponentEmail, silence } = params;
 
     // Fattibilita' geometrica: puro controllo sull'input, fuori dalla transazione.
     this.assertFleetFits(gridSize, ships);
@@ -96,6 +103,8 @@ class GameService {
           winner: null,
           boardPlayer1,
           boardPlayer2,
+          silencePlayer1: silence,
+          silencePlayer2: silence,
         },
         { transaction: t },
       );
@@ -132,6 +141,47 @@ class GameService {
       .map((m) => ({ row: m.row, col: m.col, result: m.result }));
 
     return { game, side, yourTurn: game.currentTurn === side, myShots, shotsAgainstMe };
+  }
+
+  // Il difensore "arma" il silenzio sul prossimo colpo che subira' (solo PvP, budget > 0).
+  // NON decrementa qui: il consumo avviene quando il colpo viene assorbito (executeMove, S-C).
+  public async armSilence(gameId: number, userId: number): Promise<ArmSilenceResult> {
+    const sequelize = DatabaseConnection.getInstance().getSequelize();
+    return sequelize.transaction(async (t) => {
+      const game = await gameDAO.findByPk(gameId, { transaction: t, lock: true });
+      if (game === null) {
+        throw ErrorFactory.create(ErrorType.NotFound, 'Partita non trovata');
+      }
+      if (game.type !== 'pvp') {
+        throw ErrorFactory.create(ErrorType.BadRequest, "Il silence e' disponibile solo nelle partite PvP");
+      }
+      if (game.status !== 'in_progress') {
+        throw ErrorFactory.create(ErrorType.Conflict, "La partita non e' in corso");
+      }
+
+      let side: 'player1' | 'player2';
+      if (userId === game.player1Id) {
+        side = 'player1';
+      } else if (userId === game.player2Id) {
+        side = 'player2';
+      } else {
+        throw ErrorFactory.create(ErrorType.Forbidden, 'Non partecipi a questa partita');
+      }
+
+      const budget = side === 'player1' ? game.silencePlayer1 : game.silencePlayer2;
+      if (budget <= 0) {
+        throw ErrorFactory.create(ErrorType.Conflict, 'Silence esaurito');
+      }
+
+      if (side === 'player1') {
+        game.silenceArmedPlayer1 = true;
+      } else {
+        game.silenceArmedPlayer2 = true;
+      }
+      await game.save({ transaction: t });
+
+      return { armed: true, silenceRemaining: budget };
+    });
   }
 
   // Ogni nave deve entrare nella griglia e la flotta deve starci.
