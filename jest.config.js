@@ -7,8 +7,4 @@ module.exports = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   clearMocks: true,
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.d.ts', '!src/index.ts'],
-  // I test usano un tsconfig dedicato (aggiunge i tipi globali di Jest, richiesti da TS 6).
-  transform: {
-    '^.+\\.ts$': ['ts-jest', { tsconfig: 'tsconfig.test.json' }],
-  },
 };

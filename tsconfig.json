@@ -20,8 +20,10 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "declaration": false,
-    "removeComments": false
+    "removeComments": false,
+
+    "types": ["jest", "node"]
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "src/**/__tests__/**"]
+  "exclude": ["node_modules", "dist"]
 }
