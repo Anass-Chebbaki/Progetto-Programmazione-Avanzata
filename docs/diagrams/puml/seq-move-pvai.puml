@@ -1,0 +1,93 @@
+@startuml seq-move-pvai
+!include _style.puml
+title Mossa PvAI (Pattern Strategy)
+
+actor "Utente\n(player1)" as U
+participant "gameRoutes" as R
+participant "MoveService" as MS
+participant "RandomStrategy\n<<MoveStrategy>>" as ST
+participant "fleet.ts" as F
+participant "GameDAO" as GD
+participant "MoveDAO" as MD
+participant "UserDAO" as UD
+database "PostgreSQL" as DB
+
+U -> R : POST /games/1/moves\nBearer <JWT>\n{row, col}
+activate R
+R -> MS : executeMove({gameId, userId, row, col})
+activate MS
+
+MS -> DB : BEGIN TRANSACTION
+activate DB #E8EDF2
+note right of MS
+  Una sola transazione per l'INTERO scambio:
+  o si registrano entrambe le mosse
+  con i due addebiti, o nessuna.
+end note
+
+MS -> GD : findByPk(gameId, {lock: true})
+GD --> MS : Game (type = 'pvai')
+
+== Mossa dell'UMANO ==
+MS -> F : isHit(boardIA, row, col)
+F --> MS : 'hit' | 'miss'
+MS -> MD : create({userId, row, col, result})
+MD -> DB : INSERT INTO moves
+MS -> UD : decrementTokens(userId, 0.015)
+UD -> DB : UPDATE users SET tokens = tokens - 0.015
+
+alt l'umano ha affondato tutta la flotta IA
+  MS -> MS : status='completed', winner='player1'
+  note right of MS
+    L'IA non gioca: la partita e' finita.
+    Costo dello scambio: 0.015
+  end note
+else partita ancora in corso
+  MS -> MS : currentTurn = 'player2'
+
+  == Risposta automatica dell'IA (Strategy) ==
+  MS -> MD : findAiMoves(gameId)
+  MD -> DB : SELECT * FROM moves\nWHERE userId IS NULL
+  DB --> MD : colpi gia' tentati dall'IA
+  MD --> MS : previousShots
+
+  MS -> ST : chooseMove({gridSize, previousShots})
+  activate ST
+  note right of ST
+    Pattern STRATEGY: il motore dipende
+    dall'interfaccia MoveStrategy, non
+    dall'algoritmo. Sostituire l'IA (es. con
+    un'euristica) non tocca MoveService.
+  end note
+  ST --> MS : {row, col} mai tentata
+  deactivate ST
+
+  MS -> F : isHit(boardUmano, row, col)
+  F --> MS : 'hit' | 'miss'
+  MS -> MD : create({userId: NULL, row, col, result})
+  MD -> DB : INSERT INTO moves
+  note right of MD
+    userId = NULL identifica la mossa dell'IA
+  end note
+
+  MS -> UD : decrementTokens(player1Id, 0.015)
+  UD -> DB : UPDATE users SET tokens = tokens - 0.015
+  note right of UD
+    Anche la mossa dell'IA costa 0.015,
+    addebitati all'UMANO (0.030 a scambio).
+  end note
+
+  alt l'IA ha affondato tutta la flotta umana
+    MS -> MS : status='completed', winner='player2'
+  else
+    MS -> MS : currentTurn = 'player1'
+  end
+end
+
+MS -> DB : COMMIT
+deactivate DB
+MS --> R : {result, aiMove, game}
+deactivate MS
+R --> U : 200 {result, aiMove: {row, col, result}, game}
+deactivate R
+@enduml

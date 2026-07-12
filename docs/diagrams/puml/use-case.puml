@@ -1,0 +1,54 @@
+@startuml use-case
+!include _style.puml
+' Diagramma dei casi d'uso.
+left to right direction
+
+
+actor "Giocatore" as G
+actor "Amministratore" as A
+actor "IA" as IA <<system>>
+
+rectangle "API REST" {
+  usecase "Autenticarsi\n(login email + password)" as UC_LOGIN
+  usecase "Creare una partita\n(PvP o PvAI)" as UC_CREATE
+  usecase "Eseguire una mossa" as UC_MOVE
+  usecase "Armare il silence\n(solo PvP)" as UC_SILENCE
+  usecase "Consultare lo stato\ndella partita" as UC_STATE
+  usecase "Scaricare lo storico\nmosse in CSV" as UC_CSV
+  usecase "Ricaricare il credito\ndi un utente" as UC_RECHARGE
+  usecase "Rispondere con una\nmossa automatica" as UC_AI
+
+  usecase "Verificare\nil token JWT" as UC_JWT
+  usecase "Verificare il credito" as UC_CREDIT
+  usecase "Addebitare i token" as UC_CHARGE
+}
+
+G --> UC_LOGIN
+G --> UC_CREATE
+G --> UC_MOVE
+G --> UC_SILENCE
+G --> UC_STATE
+G --> UC_CSV
+
+A --> UC_LOGIN
+A --> UC_RECHARGE
+
+UC_AI --> IA
+
+' Relazioni <<include>>: comportamenti sempre eseguiti
+UC_CREATE ..> UC_JWT : <<include>>
+UC_MOVE ..> UC_JWT : <<include>>
+UC_SILENCE ..> UC_JWT : <<include>>
+UC_STATE ..> UC_JWT : <<include>>
+UC_CSV ..> UC_JWT : <<include>>
+UC_RECHARGE ..> UC_JWT : <<include>>
+
+UC_CREATE ..> UC_CREDIT : <<include>>
+UC_CREATE ..> UC_CHARGE : <<include>>
+UC_MOVE ..> UC_CHARGE : <<include>>
+
+' Relazione <<extend>>: solo in partita PvAI la mossa innesca la risposta dell'IA
+UC_AI ..> UC_MOVE : <<extend>>\n(solo PvAI)
+
+
+@enduml

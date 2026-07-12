@@ -1,0 +1,94 @@
+@startuml seq-move-silence
+!include _style.puml
+title Mossa PvP con "Silence"
+
+actor "Bob\n(difensore)" as B
+actor "Alice\n(attaccante)" as A
+participant "gameRoutes" as R
+participant "GameService" as GS
+participant "MoveService" as MS
+participant "fleet.ts" as F
+participant "GameDAO" as GD
+participant "MoveDAO" as MD
+participant "UserDAO" as UD
+database "PostgreSQL" as DB
+
+== 1. Il DIFENSORE "arma" il silenzio ==
+B -> R : POST /games/1/silence\nBearer <JWT Bob>
+activate R
+R -> GS : armSilence(gameId, bobId)
+activate GS
+GS -> GD : findByPk(gameId, {lock: true})
+GD -> DB : SELECT ... FOR UPDATE
+DB --> GD : partita
+GD --> GS : Game
+alt partita PvAI oppure budget = 0
+  GS -->> B : 400 / 409 {error}
+else PvP e budget > 0
+  GS -> DB : UPDATE games\nSET silenceArmedPlayer2 = true
+  note right of GS
+    Il budget Silence NON ancora decrementato:
+    si consuma solo quando il colpo arriva.
+  end note
+  GS --> R : {armed: true, silenceRemaining: 3}
+  deactivate GS
+  R --> B : 200
+end
+deactivate R
+
+== 2. L'ATTACCANTE spara: il colpo viene "assorbito" ==
+A -> R : POST /games/1/moves\nBearer <JWT Alice>\n{row, col}
+activate R
+R -> MS : executeMove({gameId, aliceId, row, col})
+activate MS
+MS -> DB : BEGIN TRANSACTION
+activate DB #E8EDF2
+MS -> GD : findByPk(gameId, {lock: true})
+GD --> MS : Game
+
+group Ammissibilita' (in ordine)
+  note right of MS
+    404 partita inesistente
+    409 partita non in corso
+    403 non partecipante
+    409 non e' il tuo turno
+    400 coordinate fuori griglia
+    409 cella gia' colpita
+  end note
+end
+
+MS -> F : isHit(boardBob, row, col)
+activate F
+F --> MS : esito VERO ('hit' | 'miss')
+deactivate F
+
+MS -> MS : difensore armato && budget > 0 ?
+alt SI: il silenzio viene esercitato
+  MS -> MS : silenced = true\nsilencePlayer2 -= 1\nsilenceArmedPlayer2 = false
+end
+
+MS -> MD : create({row, col, result: <VERO>, silenced})
+MD -> DB : INSERT INTO moves
+note right of MD
+  L'esito VERO viene sempre salvato:
+  serve per la vittoria e per la
+  rivelazione a fine partita anche sul file .csv
+end note
+
+MS -> UD : decrementTokens(aliceId, 0.015)
+UD -> DB : UPDATE users SET tokens = tokens - 0.015
+
+MS -> F : totalShipCells(boardBob)
+F --> MS : n. celle-nave
+alt tutte affondate
+  MS -> MS : status = 'completed'\nwinner = 'player1'
+else partita in corso
+  MS -> MS : currentTurn = 'player2'
+end
+MS -> DB : COMMIT
+deactivate DB
+MS --> R : {result, silenced, game}
+deactivate MS
+R --> A : 200 {result: "hidden", silenced: true, game}
+deactivate R
+@enduml

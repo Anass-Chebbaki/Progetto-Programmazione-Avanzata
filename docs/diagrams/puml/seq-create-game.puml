@@ -1,0 +1,112 @@
+@startuml seq-create-game
+!include _style.puml
+title Creazione partita PvP (Transazione + Addebito)
+
+actor Client
+participant "gameRoutes" as R
+participant "authenticate" as A
+participant "checkCredit" as CC
+participant "validateBody\n(zod)" as V
+participant "GameController" as C
+participant "GameService" as S
+participant "fleet.ts" as F
+participant "GameDAO" as GD
+participant "UserDAO" as UD
+database "PostgreSQL" as DB
+participant "errorHandler" as EH
+
+Client -> R : POST /games\nBearer <JWT>\n{type, gridSize, ships, opponentEmail, silence}
+activate R
+
+== Catena di Middleware ==
+R -> A : autentica
+activate A
+A --> R : req.user popolato
+deactivate A
+R -> CC : verifica credito
+activate CC
+CC -> UD : findByPk(req.user.id)
+UD -> DB : SELECT tokens
+DB --> UD : tokens
+UD --> CC : User
+alt tokens <= 0
+  CC -->> EH : next(UnauthorizedError\n"Credito esaurito")
+  EH -->> Client : 401 {error}
+end
+CC --> R : ok
+deactivate CC
+R -> V : valida il body
+activate V
+V --> R : dati validati (con default)
+deactivate V
+
+== Controller e logica ==
+R -> C : create(req, res)
+activate C
+C -> S : createGame({creatorId, type, ...,  silence})
+activate S
+
+S -> DB : BEGIN TRANSACTION
+activate DB #E8EDF2
+
+S -> UD : findByPk(creatorId, {lock: true})
+UD -> DB : SELECT ... FOR UPDATE
+note right of UD
+  Row lock: serializza creazioni
+  concorrenti dello stesso utente
+  (niente doppio addebito).
+end note
+DB --> UD : creatore
+UD --> S : User
+
+alt credito < 0.35
+  S -> DB : ROLLBACK
+  S -->> EH : throw UnauthorizedError\n("Credito insufficiente")
+  EH -->> Client : 401 {error}
+else credito sufficiente
+  S -> GD : findActiveGameForUser(creatorId)
+  GD -> DB : SELECT partita attiva
+  DB --> GD : null / partita
+  GD --> S : Game | null
+  alt ha gia' una partita attiva
+    S -> DB : ROLLBACK
+    S -->> EH : throw ConflictError\n("Hai gia' una partita attiva")
+    EH -->> Client : 409 {error}
+  else nessuna partita attiva
+    S -> UD : findByEmail(opponentEmail, {lock: true})
+    UD --> S : avversario
+    S -> GD : findActiveGameForUser(avversario.id)
+    GD --> S : null
+
+    S -> F : generateBoard(gridSize, ships) x2
+    activate F
+    note right of F
+      Allocazione RANDOMICA delle flotte
+      (una per giocatore), fatta alla creazione.
+    end note
+    F --> S : boardPlayer1, boardPlayer2
+    deactivate F
+
+    S -> GD : create({..., boards, silencePlayer1/2})
+    GD -> DB : INSERT INTO games
+    DB --> GD : partita creata
+    GD --> S : Game
+
+    S -> UD : decrementTokens(creatorId, 0.35)
+    UD -> DB : UPDATE users SET tokens = tokens - 0.35
+
+    S -> DB : COMMIT
+    deactivate DB
+    S --> C : Game
+    deactivate S
+    C -> C : toPublicGame(game)
+    note right of C
+      DTO: esclude boardPlayer1/2
+      (anti-cheat: le flotte non escono).
+    end note
+    C --> Client : 201 {game}
+    deactivate C
+  end
+end
+deactivate R
+@enduml

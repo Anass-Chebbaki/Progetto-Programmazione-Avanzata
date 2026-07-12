@@ -1,0 +1,57 @@
+@startuml er
+!include _style.puml
+
+left to right direction
+hide circle
+skinparam linetype ortho
+
+entity "Users" as users {
+    * **id** : INTEGER <<PK>>
+    --
+    * email : STRING <<UNIQUE>>
+    * password : STRING <<bcrypt hash>>
+    * role : STRING <<user | admin>>
+    * tokens : DECIMAL(10,3)
+    createdAt : TIMESTAMP
+    updatedAt : TIMESTAMP
+}
+
+entity "Games" as games {
+    * **id** : INTEGER <<PK>>
+    --
+    * type : STRING <<PvP | PvAI>>
+    * status : STRING <<in_progress | completed>>
+    * gridSize : INTEGER
+    * player1Id : INTEGER <<FK users.id>>
+    player2Id : INTEGER <<FK users.id (NULL = IA)>>
+    * currentTurn : STRING <<player1 | player2>>
+    winner : STRING <<player1 | player2 | NULL>>
+    boardPlayer1 : JSONB <<Fleet>>
+    boardPlayer2 : JSONB <<Fleet>>
+    * silencePlayer1 : INTEGER <<0-5>>
+    * silencePlayer2 : INTEGER <<0-5>>
+    * silenceArmedPlayer1 : BOOLEAN
+    * silenceArmedPlayer2 : BOOLEAN
+    createdAt : TIMESTAMP
+    updatedAt : TIMESTAMP
+}
+
+entity "Moves" as moves {
+    * **id** : INTEGER <<PK>>
+    --
+    * gameId : INTEGER <<FK games.id>>
+    userId : INTEGER <<FK users.id (NULL = IA)>>
+    * row : INTEGER
+    * col : INTEGER
+    * result : STRING <<hit | miss>>
+    * silenced : BOOLEAN
+    createdAt : TIMESTAMP
+    updatedAt : TIMESTAMP
+}
+
+
+users ||--o{ games 
+users |o--o{ games 
+games ||--o{ moves 
+users |o--o{ moves 
+@enduml

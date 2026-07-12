@@ -1,0 +1,66 @@
+@startuml seq-login
+!include _style.puml
+title Autenticazione (JWT RS256)
+
+actor Client
+participant "authRoutes" as R
+participant "validateBody\n(zod)" as V
+participant "AuthController" as C
+participant "AuthService" as S
+participant "UserDAO" as DAO
+database "PostgreSQL" as DB
+participant "bcryptjs" as B
+participant "TokenService" as T
+participant "errorHandler" as EH
+
+Client -> R : POST /login\n{email, password}
+activate R
+R -> V : valida il body
+activate V
+alt body non valido
+  V -->> EH : next(BadRequestError)
+  EH -->> Client : 400 {error}
+else body valido
+  V --> R : ok
+  deactivate V
+  R -> C : login(req, res)
+  activate C
+  C -> S : login(email, password)
+  activate S
+  S -> DAO : findByEmail(email)
+  activate DAO
+  DAO -> DB : SELECT * FROM users WHERE email = ?
+  DB --> DAO : utente (o null)
+  DAO --> S : User | null
+  deactivate DAO
+
+  alt utente inesistente o password errata
+    S -> B : compare(password, user.password)
+    activate B
+    B --> S : false
+    deactivate B
+    S -->> EH : throw UnauthorizedError\n("Credenziali non valide")
+    activate EH
+    EH -->> Client : 401 {error}
+    deactivate EH
+  else credenziali corrette
+    S -> B : compare(password, user.password)
+    activate B
+    B --> S : true
+    deactivate B
+    S -> T : sign({id, email, role})
+    activate T
+    note right of T
+      Firma con Private Key (RS256).
+      (Payload = soli metadati)
+    end note
+    T --> S : JWT
+    deactivate T
+    S --> C : token
+    deactivate S
+    C --> Client : 200 {token}
+    deactivate C
+  end
+end
+deactivate R
+@enduml

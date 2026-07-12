@@ -1,0 +1,55 @@
+' _style.puml (stile condiviso da tutti i diagrammi)
+'===================================================
+
+skinparam shadowing false
+skinparam roundcorner 10
+skinparam defaultFontName Helvetica
+skinparam ArrowColor #2C3E50
+
+' --- Class / Entity (diagramma E-R) ---
+skinparam class {
+    BackgroundColor #F8F9FA
+    BorderColor #2C3E50
+    FontColor Black
+    ArrowColor #2C3E50
+}
+
+' --- Diagrammi di sequenza ---
+skinparam sequence {
+    ArrowColor #2C3E50
+    ArrowFontColor #2C3E50
+    LifeLineBorderColor #2C3E50
+    LifeLineBackgroundColor #E8EDF2
+    ParticipantBackgroundColor #F8F9FA
+    ParticipantBorderColor #2C3E50
+    ParticipantFontColor #2C3E50
+    ActorBackgroundColor #F8F9FA
+    ActorBorderColor #2C3E50
+    GroupBackgroundColor #E8EDF2
+    GroupBorderColor #2C3E50
+    GroupHeaderFontColor #2C3E50
+    DividerBackgroundColor #E8EDF2
+    DividerBorderColor #2C3E50
+}
+
+' --- Note  ---
+skinparam note {
+    BackgroundColor #FFF8DC
+    BorderColor #B8A160
+    FontColor #4A4030
+}
+
+' --- Database e casi d'uso ---
+skinparam database {
+    BackgroundColor #F8F9FA
+    BorderColor #2C3E50
+}
+skinparam usecase {
+    BackgroundColor #F8F9FA
+    BorderColor #2C3E50
+    FontColor Black
+}
+skinparam actor {
+    BackgroundColor #F8F9FA
+    BorderColor #2C3E50
+}
