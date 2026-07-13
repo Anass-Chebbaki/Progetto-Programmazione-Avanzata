@@ -127,59 +127,46 @@ Il silence **non è automatico**: senza un'esplicita chiamata di *arming*, nessu
 
 ## 5. Struttura del progetto
 
-```
+<details>
+<summary><b>Struttura completa del progetto</b> (clicca per espandere)</summary>
+
+<pre>
 Progetto-Programmazione-Avanzata/
 │
-├── docs/                          # diagrammi UML e materiale pubblico
+├── <img src="docs/icons/folder-docs.svg" width="14"> <b>docs/</b>                    diagrammi UML, copertina, icone
+├── <img src="docs/icons/folder-api.svg" width="14"> <b>postman/</b>                 collection Postman
 │
-├── postman/                       # collection Postman
+├── <img src="docs/icons/folder-src.svg" width="14"> <b>src/</b>
+│   ├── <img src="docs/icons/folder-typescript.svg" width="14"> <b>@types/</b>              augmentation di Express.Request
+│   ├── <img src="docs/icons/folder-config.svg" width="14"> <b>config/</b>              connessione Sequelize (<i>Singleton</i>)
+│   ├── <img src="docs/icons/folder-controller.svg" width="14"> <b>controller/</b>          adattatori HTTP
+│   ├── <img src="docs/icons/folder-database.svg" width="14"> <b>dao/</b>                 accesso ai dati (<i>DAO</i>)
+│   ├── <img src="docs/icons/folder-database.svg" width="14"> <b>database/</b>            migrazioni e seeder
+│   ├── <img src="docs/icons/folder-typescript.svg" width="14"> <b>dto/</b>                 vista pubblica (anti-cheat)
+│   ├── <img src="docs/icons/folder-error.svg" width="14"> <b>errors/</b>              gerarchia errori (<i>Factory</i>)
+│   ├── <img src="docs/icons/folder-middleware.svg" width="14"> <b>middleware/</b>          catena(<i>Chain of Responsibility</i>)
+│   ├── <img src="docs/icons/folder-database.svg" width="14"> <b>model/</b>               modelli Sequelize
+│   ├── <img src="docs/icons/folder-routes.svg" width="14"> <b>routes/</b>              endpoint e composizione delle catene
+│   ├── <img src="docs/icons/folder-keys.svg" width="14"> <b>secrets/</b>             chiavi RS256 (non versionate)
+│   ├── <img src="docs/icons/folder-src.svg" width="14"> <b>service/</b>             logica di dominio
+│   ├── <img src="docs/icons/folder-utils.svg" width="14"> <b>strategy/</b>            mossa dell'IA (<i>Strategy</i>)
+│   ├── <img src="docs/icons/folder-utils.svg" width="14"> <b>utils/</b>               asyncHandler, csv, fleet
+│   ├── <img src="docs/icons/folder-test.svg" width="14"> <b>validation/</b>          schemi zod
+│   └── <img src="docs/icons/typescript.svg" width="14"> index.ts             bootstrap dell'applicazione
 │
-├── src/
-│   ├── @types/                    # augmentation di Express.Request
-│   │
-│   ├── config/                    # pattern SINGLETON
-│   │
-│   ├── controller/                # adattatori HTTP
-│   │
-│   ├── dao/                       # pattern DAO: unico livello che parla con Sequelize
-│   │
-│   ├── database/                  # contiene seeders e migrations
-│   │
-│   ├── dto/                       # vista pubblica della partita
-│   │
-│   ├── errors/                    # pattern FACTORY
-│   │
-│   ├── middleware/                # pattern CHAIN OF RESPONSIBILITY
-│   │
-│   ├── model/                     # modelli Sequelize
-│   │
-│   ├── routes/                    # definizione degli endpoint e delle catene
-│   │
-│   ├── secrets/                   # chiavi RS256
-│   │
-│   ├── service/                   # logica di dominio
-│   │
-│   ├── strategy/                  # pattern STRATEGY (IA)
-│   │
-│   ├── utils/
-│   │   ├── asyncHandler.ts        # wrapper per gli errori nelle funzioni async
-│   │   ├── csv.ts                 # serializzazione CSV (RFC 4180)
-│   │   └── fleet.ts               # logica: flotte, hit/miss e conteggio celle
-│   │
-│   ├── validation/                # schemi zod
-│   │
-│   └── index.ts                   # bootstrap dell'applicazione
-│
-├── .env.example                   # variabili d'ambiente di esempio
-├── .sequelizerc                   # percorsi per sequelize-cli
-├── Dockerfile
-├── docker-compose.yml
-├── entrypoint.sh                  # routine avvio Docker
-├── jest.config.js
-├── tsconfig.json                  # configurazione per editor e typecheck (include i test)
-└── tsconfig.build.json            # configurazione di build
-```
+├── <img src="docs/icons/docker.svg" width="14"> Dockerfile
+├── <img src="docs/icons/yaml.svg" width="14"> docker-compose.yml
+├── <img src="docs/icons/console.svg" width="14"> entrypoint.sh         chiavi, attesa DB, migrazioni, seed, avvio
+├── <img src="docs/icons/javascript.svg" width="14"> jest.config.js
+├── <img src="docs/icons/nodejs.svg" width="14"> package.json
+├── <img src="docs/icons/json.svg" width="14"> tsconfig.json         editor e typecheck (include i test)
+├── <img src="docs/icons/json.svg" width="14"> tsconfig.build.json   build (esclude i test)
+└── <img src="docs/icons/settings.svg" width="14"> .env.example
+</pre>
 
+<sub>Icone: <a href="https://github.com/PKief/vscode-material-icon-theme">Material Icon Theme</a> (MIT).</sub>
+
+</details>
 
 ## 6. Architettura
 
