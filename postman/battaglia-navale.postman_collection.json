@@ -1,0 +1,847 @@
+{
+  "info": {
+    "name": "Battaglia Navale",
+    "description": "Collection completa del back-end di battaglia navale",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "tokenAlice", "value": "" },
+    { "key": "tokenBob", "value": "" },
+    { "key": "tokenAdmin", "value": "" },
+    { "key": "tokenCharlie", "value": "" },
+    { "key": "pvpGameId", "value": "" },
+    { "key": "pvaiGameId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Health & Autenticazione",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/health", "host": ["{{baseUrl}}"], "path": ["health"] },
+            "description": "Verifica che il servizio sia attivo. Non richiede autenticazione."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"alice123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+            "description": "Autenticazione con email e password. La password viene confrontata con l'hash bcrypt; il token restituito e' firmato in RS256.\n\nLo script di test salva il token nella variabile {{tokenAlice}}."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('restituisce un token', () => pm.expect(body.token).to.be.a('string'));",
+                  "pm.collectionVariables.set('tokenAlice', body.token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — bob",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"bob@example.com\",\n  \"password\": \"bob123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tokenBob', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"admin123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tokenAdmin', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /login — charlie (credito 0)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"charlie@example.com\",\n  \"password\": \"charlie123\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": ["{{baseUrl}}"], "path": ["login"] },
+            "description": "charlie ha credito 0 dal seed: serve a dimostrare il blocco 401 (credito esaurito) e la successiva ricarica da parte dell'admin."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set('tokenCharlie', pm.response.json().token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me — alice",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAlice}}" }],
+            "url": { "raw": "{{baseUrl}}/me", "host": ["{{baseUrl}}"], "path": ["me"] },
+            "description": "Rotta protetta: restituisce i metadati contenuti nel JWT."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const u = pm.response.json().user;",
+                  "pm.test('e\\' alice', () => pm.expect(u.email).to.eql('alice@example.com'));",
+                  "pm.test('nessuna password nel token', () => pm.expect(u.password).to.be.undefined);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Partita PvP",
+      "item": [
+        {
+          "name": "POST /games — alice sfida bob (silence 3)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"pvp\",\n  \"opponentEmail\": \"bob@example.com\",\n  \"silence\": 3\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "Crea una partita PvP. Addebita 0.35 token ad alice, alloca le flotte in modo randomico e assegna a ciascun giocatore un budget silence di 3.\n\nAnti-cheat: la risposta NON contiene le flotte."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const g = pm.response.json().game;",
+                  "pm.test('partita PvP in corso', () => {",
+                  "  pm.expect(g.type).to.eql('pvp');",
+                  "  pm.expect(g.status).to.eql('in_progress');",
+                  "});",
+                  "pm.test('avversario assegnato', () => pm.expect(g.player2Id).to.not.eql(null));",
+                  "pm.test('ANTI-CHEAT: nessuna flotta nella risposta', () => {",
+                  "  pm.expect(g.boardPlayer1).to.be.undefined;",
+                  "  pm.expect(g.boardPlayer2).to.be.undefined;",
+                  "});",
+                  "pm.collectionVariables.set('pvpGameId', g.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /moves — alice spara (0,0)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 0,\n  \"col\": 0\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            },
+            "description": "Mossa di alice. Addebita 0.015 token e passa il turno a bob."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"esito rivelato (nessun silence armato)\", () => pm.expect(b.result).to.be.oneOf(['hit', 'miss']));",
+                  "pm.test('il turno passa a bob', () => pm.expect(b.game.currentTurn).to.eql('player2'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /moves — bob spara (5,5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenBob}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 5,\n  \"col\": 5\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('il turno torna ad alice', () => pm.expect(pm.response.json().game.currentTurn).to.eql('player1'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /games/:id — stato (alice)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAlice}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}"]
+            },
+            "description": "Stato dal punto di vista di alice: i propri colpi (myShots) e quelli subiti (shotsAgainstMe). Mai le navi avversarie non colpite."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const s = pm.response.json();",
+                  "pm.test('alice e\\' player1 ed e\\' il suo turno', () => {",
+                  "  pm.expect(s.you).to.eql('player1');",
+                  "  pm.expect(s.yourTurn).to.eql(true);",
+                  "});",
+                  "pm.test('1 colpo sparato, 1 subito', () => {",
+                  "  pm.expect(s.myShots).to.have.lengthOf(1);",
+                  "  pm.expect(s.shotsAgainstMe).to.have.lengthOf(1);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Silence (solo PvP)",
+      "item": [
+        {
+          "name": "POST /silence — bob (difensore) arma",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenBob}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/silence",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "silence"]
+            },
+            "description": "E' il DIFENSORE a esercitare il silenzio: bob dichiara in anticipo che l'esito del prossimo colpo subito non sara' rivelato ad alice.\n\nIl budget NON viene ancora decrementato: si consuma quando il colpo arriva."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('silenzio armato', () => pm.expect(b.armed).to.eql(true));",
+                  "pm.test('budget non ancora consumato (3)', () => pm.expect(b.silenceRemaining).to.eql(3));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /moves — alice spara (1,1): esito NASCOSTO",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 1,\n  \"col\": 1\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            },
+            "description": "Il colpo viene ASSORBITO: la mossa e' registrata con l'esito VERO nel database, ma ad alice viene restituito 'hidden'. Il budget di bob scende a 2 e il flag si disarma."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test(\"l'esito e' nascosto all'attaccante\", () => pm.expect(b.result).to.eql('hidden'));",
+                  "pm.test('la mossa risulta silenziata', () => pm.expect(b.silenced).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /games/:id — alice NON vede l'esito",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAlice}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const shot = pm.response.json().myShots.find(s => s.row === 1 && s.col === 1);",
+                  "pm.test('il colpo silenziato resta hidden', () => {",
+                  "  pm.expect(shot.result).to.eql('hidden');",
+                  "  pm.expect(shot.silenced).to.eql(true);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /games/:id — bob (difensore) vede l'esito vero",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenBob}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}"]
+            },
+            "description": "Il difensore conosce la propria flotta: il silence non nasconde nulla a lui. Nasconde l'informazione a chi spara."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const shot = pm.response.json().shotsAgainstMe.find(s => s.row === 1 && s.col === 1);",
+                  "pm.test(\"bob vede l'esito reale\", () => pm.expect(shot.result).to.be.oneOf(['hit', 'miss']));",
+                  "pm.test('ed e\\' marcato come silenziato', () => pm.expect(shot.silenced).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Storico mosse (CSV)",
+      "item": [
+        {
+          "name": "GET /moves/csv — alice (partecipante)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAlice}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves/csv",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves", "csv"]
+            },
+            "description": "Storico in formato CSV, riservato ai partecipanti. Il mascheramento del silence e' coerente con lo stato partita: il colpo silenziato di alice appare 'hidden' finche' la partita e' in corso."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('Content-Type text/csv', () => pm.expect(pm.response.headers.get('Content-Type')).to.include('text/csv'));",
+                  "const csv = pm.response.text();",
+                  "pm.test('intestazione corretta', () => pm.expect(csv.split('\\n')[0]).to.eql('n,player,row,col,result,silenced,timestamp'));",
+                  "pm.test('il colpo silenziato di alice e\\' mascherato', () => pm.expect(csv).to.include('hidden'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Partita PvAI (Strategy)",
+      "item": [
+        {
+          "name": "POST /games — admin contro l'IA",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"pvai\"\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "Partita contro l'IA. player2Id e' NULL: l'IA non e' un utente del sistema."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const g = pm.response.json().game;",
+                  "pm.test('partita PvAI', () => pm.expect(g.type).to.eql('pvai'));",
+                  "pm.test(\"l'IA non e' un utente (player2Id = null)\", () => pm.expect(g.player2Id).to.eql(null));",
+                  "pm.collectionVariables.set('pvaiGameId', g.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /moves — una richiesta, due mosse",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 0,\n  \"col\": 0\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvaiGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvaiGameId}}", "moves"]
+            },
+            "description": "Una sola richiesta innesca la mossa umana E la risposta dell'IA (scelta dalla RandomStrategy), nella STESSA transazione.\n\nCosto dello scambio: 0.030 token, a carico dell'utente umano."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('esito della mia mossa', () => pm.expect(b.result).to.be.oneOf(['hit', 'miss']));",
+                  "pm.test(\"l'IA ha risposto (aiMove presente)\", () => {",
+                  "  pm.expect(b.aiMove).to.be.an('object');",
+                  "  pm.expect(b.aiMove.row).to.be.a('number');",
+                  "  pm.expect(b.aiMove.col).to.be.a('number');",
+                  "  pm.expect(b.aiMove.result).to.be.oneOf(['hit', 'miss']);",
+                  "});",
+                  "pm.test('il turno torna subito al giocatore', () => pm.expect(b.game.currentTurn).to.eql('player1'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Credito esaurito e ricarica admin",
+      "item": [
+        {
+          "name": "[401] charlie (0 token) prova a creare una partita",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCharlie}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"pvai\"\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "Il middleware checkCredit blocca la richiesta: a credito esaurito non si possono AVVIARE nuove partite."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('Credito esaurito', () => pm.expect(pm.response.json().error.message).to.eql('Credito esaurito'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /admin/recharge — admin ricarica charlie",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAdmin}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"charlie@example.com\",\n  \"tokens\": 10\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/recharge", "host": ["{{baseUrl}}"], "path": ["admin", "recharge"] },
+            "description": "Rotta riservata al ruolo admin. Semantica SET: il credito viene IMPOSTATO al nuovo valore."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('credito impostato a 10', () => pm.expect(pm.response.json().tokens).to.eql(10));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[201] charlie ora puo' creare la partita",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenCharlie}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"pvai\"\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "Stessa richiesta di prima: ora passa, perche' il credito e' stato ricaricato."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Casi d'errore",
+      "item": [
+        {
+          "name": "[401] Mossa senza token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 2,\n  \"col\": 2\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            },
+            "description": "La catena si ferma al primo anello: authenticate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 Unauthorized', () => pm.response.to.have.status(401));",
+                  "pm.test('errore in formato standard', () => pm.expect(pm.response.json().error.name).to.eql('UnauthorizedError'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[403] charlie chiede lo stato di una partita altrui",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenCharlie}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}"]
+            },
+            "description": "charlie e' autenticato ma non partecipa alla partita di alice e bob."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', () => pm.response.to.have.status(403));",
+                  "pm.test('ForbiddenError', () => pm.expect(pm.response.json().error.name).to.eql('ForbiddenError'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[404] Partita inesistente",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{tokenAlice}}" }],
+            "url": { "raw": "{{baseUrl}}/games/999999", "host": ["{{baseUrl}}"], "path": ["games", "999999"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[409] Mossa fuori turno (alice, ma tocca a bob)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 2,\n  \"col\": 2\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            },
+            "description": "Dopo il colpo silenziato di alice il turno e' passato a bob."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('non e\\' il tuo turno', () => pm.expect(pm.response.json().error.message).to.include('turno'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[409] Cella gia' colpita (bob ritenta 5,5)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenBob}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 5,\n  \"col\": 5\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('cella gia\\' colpita', () => pm.expect(pm.response.json().error.message).to.include('colpito'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[400] Coordinate fuori griglia (bob, 99/99)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenBob}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"row\": 99,\n  \"col\": 99\n}" },
+            "url": {
+              "raw": "{{baseUrl}}/games/{{pvpGameId}}/moves",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "{{pvpGameId}}", "moves"]
+            },
+            "description": "zod accetta interi >= 0; il limite superiore dipende da gridSize e viene verificato dal service."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('coordinate fuori griglia', () => pm.expect(pm.response.json().error.message).to.include('griglia'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[409] Seconda partita con una gia' attiva (alice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"pvp\",\n  \"opponentEmail\": \"bob@example.com\"\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "Regola: una sola partita attiva per utente."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));",
+                  "pm.test('partita gia\\' attiva', () => pm.expect(pm.response.json().error.message).to.include('attiva'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[400] Body non valido — manca \"type\" (zod)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"opponentEmail\": \"bob@example.com\"\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "La validazione zod interviene PRIMA del controller: la richiesta non raggiunge mai la logica di gioco."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('BadRequestError', () => pm.expect(pm.response.json().error.name).to.eql('BadRequestError'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[400] silence richiesto in una partita PvAI",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"type\": \"pvai\",\n  \"silence\": 3\n}" },
+            "url": { "raw": "{{baseUrl}}/games", "host": ["{{baseUrl}}"], "path": ["games"] },
+            "description": "Il silence e' una meccanica PvP: contro l'IA non ha senso, e lo schema zod lo rifiuta."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));",
+                  "pm.test('silence solo in PvP', () => pm.expect(pm.response.json().error.message).to.include('PvP'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "[403] alice tenta la ricarica (non e' admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{tokenAlice}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@example.com\",\n  \"tokens\": 999\n}" },
+            "url": { "raw": "{{baseUrl}}/admin/recharge", "host": ["{{baseUrl}}"], "path": ["admin", "recharge"] },
+            "description": "Il middleware requireAdmin blocca la richiesta prima ancora della validazione del body."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 Forbidden', () => pm.response.to.have.status(403));",
+                  "pm.test('riservata agli amministratori', () => pm.expect(pm.response.json().error.message).to.include('amministratori'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
