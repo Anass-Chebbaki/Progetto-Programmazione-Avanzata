@@ -29,7 +29,7 @@
 11. [Gestione degli errori](#11-gestione-degli-errori)
 12. [Avvio del progetto con Docker](#12-avvio-del-progetto-con-docker)
 13. [Test automatici (Jest)](#13-test-automatici-jest)
-14. [Test delle API con Postman](#14-test-delle-api-con-postman)
+14. [Test delle API con Postman](#14-test-con-postman)
 
 
 ## 1. Obiettivo del progetto
