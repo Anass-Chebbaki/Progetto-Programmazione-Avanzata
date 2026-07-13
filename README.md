@@ -797,6 +797,39 @@ La collection è organizzata per scenari:
 | **Casi d'errore** | 400, 401 (token e credito), 403, 404, 409 |
 
 
+
 ## Autore
 
-Chebbaki Anass
+<table>
+  <tr>
+    <td align="center" width="140">
+      <a href="https://github.com/Anass-Chebbaki">
+        <img src="https://github.com/Anass-Chebbaki.png" width="100" style="border-radius:50%" alt="Anass Chebbaki"><br>
+        <sub><b>Anass Chebbaki</b></sub>
+      </a>
+    </td>
+    <td>
+      <b>Programmazione Avanzata</b><br>
+      Università Politecnica delle Marche (UNIVPM)<br>
+      Corso di Laurea in Ingegneria Informatica e dell'Automazione<br>
+      Anno Accademico 2025/2026<br>
+      <br>
+      Matricola: <i>S1124883</i><br>
+      Docente: <i>Adriano Mancini</i>
+    </td>
+  </tr>
+</table>
+
+
+## Repository
+
+<p align="center">
+  <img src="docs/qr-repo.png" alt="QR code del repository" width="180"><br>
+  <a href="https://github.com/Anass-Chebbaki/Progetto-Programmazione-Avanzata">
+    <b>github.com/Anass-Chebbaki/Progetto-Programmazione-Avanzata</b>
+  </a>
+</p>
+
+<p align="center">
+  <sub>Università Politecnica delle Marche · 2026</sub>
+</p>
