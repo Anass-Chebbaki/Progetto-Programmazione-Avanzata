@@ -128,7 +128,9 @@ Il silence **non è automatico**: senza un'esplicita chiamata di *arming*, nessu
 ## 5. Struttura del progetto
 
 <details>
-<summary><b>Struttura completa del progetto</b> (clicca per espandere)</summary>
+<summary>
+  <kbd><b>&nbsp; 📂 &nbsp;Struttura completa del progetto (clicca per espandere) &nbsp;</b></kbd>
+</summary>
 
 <pre>
 Progetto-Programmazione-Avanzata/
@@ -706,7 +708,7 @@ docker compose up --build
 
 **Cosa accade all'avvio** (script `entrypoint.sh`, eseguito nel container `app`):
 
-1. **generazione della coppia di chiavi RSA** per i JWT, *solo se non esistono già* (operazione **idempotente**: al riavvio i token già emessi restano validi);
+1. **generazione della coppia di chiavi RSA** per i JWT, *solo se non esistono già*;
 2. **attesa** che PostgreSQL accetti connessioni (`pg_isready`);
 3. esecuzione delle **migrazioni** (creazione dello schema);
 4. esecuzione dei **seed**;
@@ -811,7 +813,6 @@ La collection è organizzata per scenari:
 ## Repository
 
 <p align="center">
-  <img src="docs/qr-repo.png" alt="QR code del repository" width="180"><br>
   <a href="https://github.com/Anass-Chebbaki/Progetto-Programmazione-Avanzata">
     <b>github.com/Anass-Chebbaki/Progetto-Programmazione-Avanzata</b>
   </a>
